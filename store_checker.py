@@ -5,11 +5,12 @@ import json
 import os
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import crayons
 import minibar
 import requests
+import yagmail
 
 
 class Configuration:
@@ -30,6 +31,11 @@ class Configuration:
         self.selected_stores = config.get("stores", [])
         # Store numbers are available here.
         self.appointment_stores = config.get("appointment_stores", [])
+        self.email_username = config.get("email_username")
+        self.email_password = config.get("email_password")
+        self.email_to = config.get("email_to")
+        self.speak = config.get("speak", False)
+        self.still_checking_notification_hours = config.get("still_checking_notification_hours", 2)
 
 
 class StoreChecker:
@@ -55,6 +61,7 @@ class StoreChecker:
         self.configuration = Configuration(filename)
         self.stores_list_with_stock = {}
         self.base_url = "https://www.apple.com/"
+        self.last_notify = datetime.now()
 
         # Since the URL only needs country code for non-US countries, switch
         # the URL for country == US.
@@ -90,6 +97,8 @@ class StoreChecker:
         # requested (used to play the sound)
         stock_available = False
 
+        available_stores = []
+
         # Go through the stores and fetch the stock for all the devices/parts
         # in the store and print their status.
         for store in stores:
@@ -102,6 +111,7 @@ class StoreChecker:
             )
             for part_id, part in store.get("parts").items():
                 if part.get("storeSelectionEnabled") is True:
+                    available_stores.append(store.get("storeName"))
                     stock_available = True
                     print(
                         " - {} {} ({})".format(
@@ -122,9 +132,24 @@ class StoreChecker:
         # Play the sound if phone is available.
         if stock_available:
             print("\n{}".format(crayons.green("Current Status - Stock is Available")))
-            os.system('say "Device Available!"')
+            if self.configuration.speak:
+                os.system('say "Device Available!"')
+            if self.configuration.email_username and self.configuration.email_to:
+                yag = yagmail.SMTP(self.configuration.email_username, self.configuration.email_password)
+                contents = [f"Found your device! It's available at: {', '.join(available_stores)}"]
+                yag.send(self.configuration.email_to, "Found!", contents)
         else:
             print("\n{}".format(crayons.red("Current Status - No Stock Available")))
+            if (
+                self.still_checking_notification_hours > 0
+                and self.last_notify + timedelta(hours=self.still_checking_notification_hours) < datetime.now()
+                and self.configuration.email_username
+                and self.configuration.email_to
+            ):
+                yag = yagmail.SMTP(self.configuration.email_username, self.configuration.email_password)
+                contents = ["I am still checking for your device"]
+                yag.send(self.configuration.email_to, "Still Checking", contents)
+                self.last_notify = datetime.now()
         print("\n")
 
         if not not self.configuration.appointment_stores:
@@ -233,7 +258,7 @@ class StoreChecker:
                     slots_found = True
                 else:
                     print(" - {} {}".format(crayons.red("✖"), store.get("storeNumber")))
-        if slots_found is True:
+        if slots_found is True and self.configuration.speak:
             os.system('say "Appointment Slot Available!"')
         print("{}".format(crayons.blue("\n✔  Done\n")))
 

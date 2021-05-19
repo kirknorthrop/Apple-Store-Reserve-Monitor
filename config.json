@@ -5,5 +5,8 @@
   "models": ["MGJ53ZD/A"],
   "carriers": ["TMOBILE/US", "SPRINT/US", "ATT/US"],
   "stores": ["R462"],
-  "appointment_stores": ["R358", "R462"]
+  "appointment_stores": ["R358", "R462"],
+  "email_username": "",
+  "email_password": "",
+  "email_to": ""
 }
