@@ -141,8 +141,8 @@ class StoreChecker:
         else:
             print("\n{}".format(crayons.red("Current Status - No Stock Available")))
             if (
-                self.still_checking_notification_hours > 0
-                and self.last_notify + timedelta(hours=self.still_checking_notification_hours) < datetime.now()
+                self.configuration.still_checking_notification_hours > 0
+                and self.last_notify + timedelta(hours=self.configuration.still_checking_notification_hours) < datetime.now()
                 and self.configuration.email_username
                 and self.configuration.email_to
             ):
