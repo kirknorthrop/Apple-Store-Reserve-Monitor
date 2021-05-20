@@ -31,8 +31,11 @@ class Monitor:
     def start_monitoring(self):
         """Start monitoring store's stock."""
         while True:
-            self.store_checker.refresh()
-            time.sleep(POLLING_INTERVAL_SECONDS)
+            try:
+                self.store_checker.refresh()
+            except:
+                print("Failed to check")
+            time.sleep(self.POLLING_INTERVAL_SECONDS)
 
 
 if __name__ == "__main__":
